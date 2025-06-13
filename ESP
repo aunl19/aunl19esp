@@ -2,373 +2,6 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
-local GameId = game.GameId
-
--- Các ID game
-local FORSAKEN_ID = 18687417158
-local MYSTERY_MURDERER2_ID = 142823291
-
--- GUI setup chung
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ESPMenu"
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 220, 0, 320)
-Frame.Position = UDim2.new(0, 20, 0, 20)
-Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Frame.BorderSizePixel = 0
-Frame.Parent = ScreenGui
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundTransparency = 1
-Title.TextColor3 = Color3.new(1, 1, 1)
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 20
-Title.Parent = Frame
-
-local PlayerList = Instance.new("ScrollingFrame")
-PlayerList.Size = UDim2.new(1, -20, 1, -90)
-PlayerList.Position = UDim2.new(0, 10, 0, 80)
-PlayerList.CanvasSize = UDim2.new(0, 0, 0, 0)
-PlayerList.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-PlayerList.BorderSizePixel = 0
-PlayerList.Parent = Frame
-PlayerList.ScrollBarThickness = 6
-
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Parent = PlayerList
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 4)
-
--- Các biến theo dõi ESP
-local selectedPlayer = nil
-local espAllEnabled = false
-local espParts = {}
-local highlights = {}
-
--- Hàm tạo ESP cơ bản
-local function createESP(part, playerName)
-    local oldGui = part:FindFirstChild("ESPGui")
-    if oldGui then
-        oldGui:Destroy()
-    end
-
-    local gui = Instance.new("BillboardGui")
-    gui.Name = "ESPGui"
-    gui.Adornee = part
-    gui.Size = UDim2.new(0, 120, 0, 30)
-    gui.StudsOffset = Vector3.new(0, 2, 0)
-    gui.AlwaysOnTop = true
-
-    local text = Instance.new("TextLabel", gui)
-    text.Size = UDim2.new(1, 0, 1, 0)
-    text.Text = playerName
-    text.TextColor3 = Color3.fromRGB(255, 255, 255)
-    text.BackgroundTransparency = 1
-    text.TextScaled = false
-    text.TextSize = 18
-    text.Font = Enum.Font.SourceSansBold
-
-    gui.Parent = part
-end
-
-local function createHighlight(character)
-    if highlights[character] then
-        highlights[character]:Destroy()
-        highlights[character] = nil
-    end
-
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "ESPHighlight"
-    highlight.FillColor = Color3.fromRGB(255, 255, 0)
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 0)
-    highlight.Adornee = character
-    highlight.Parent = character
-
-    highlights[character] = highlight
-end
-
-local function clearAllESP()
-    for part, _ in pairs(espParts) do
-        local oldGui = part:FindFirstChild("ESPGui")
-        if oldGui then
-            oldGui:Destroy()
-        end
-    end
-    espParts = {}
-
-    for character, highlight in pairs(highlights) do
-        if highlight then
-            highlight:Destroy()
-        end
-    end
-    highlights = {}
-end
-
-local function updateESPForPlayer(player)
-    clearAllESP()
-    if not player.Character then return end
-    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        createESP(hrp, player.Name)
-        espParts[hrp] = true
-        createHighlight(player.Character)
-    end
-end
-
-local function updateESPForAllPlayers(enable)
-    clearAllESP()
-    if enable then
-        for _, player in pairs(Players:GetPlayers()) do
-            if player.Character then
-                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    createESP(hrp, player.Name)
-                    espParts[hrp] = true
-                    createHighlight(player.Character)
-                end
-            end
-        end
-    end
-end
-
--- Hàm populate danh sách người chơi (dùng chung)
-local function populatePlayerList()
-    for _, child in pairs(PlayerList:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
-
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, 0, 0, 30)
-            btn.Text = player.Name
-            btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-            btn.TextColor3 = Color3.new(1, 1, 1)
-            btn.Font = Enum.Font.SourceSans
-            btn.TextSize = 18
-            btn.Parent = PlayerList
-
-            btn.MouseButton1Click:Connect(function()
-                espAllEnabled = false
-                selectedPlayer = player
-                updateESPForPlayer(player)
-            end)
-        end
-    end
-
-    wait()
-    PlayerList.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
-end
-
--- Xóa tất cả button chức năng trước khi tạo mới
-local function clearButtons()
-    for _, child in pairs(Frame:GetChildren()) do
-        if child:IsA("TextButton") and child ~= espAllButton then
-            child:Destroy()
-        end
-    end
-end
-
--- Tạo nút chung Toggle ESP All (dùng lại)
-local espAllButton = Instance.new("TextButton")
-espAllButton.Size = UDim2.new(1, -20, 0, 30)
-espAllButton.Position = UDim2.new(0, 10, 0, 40)
-espAllButton.Text = "Toggle ESP All"
-espAllButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-espAllButton.TextColor3 = Color3.new(1, 1, 1)
-espAllButton.Font = Enum.Font.SourceSansBold
-espAllButton.TextSize = 18
-espAllButton.Parent = Frame
-
-espAllButton.MouseButton1Click:Connect(function()
-    espAllEnabled = not espAllEnabled
-    selectedPlayer = nil
-    updateESPForAllPlayers(espAllEnabled)
-end)
-
--- Các chức năng riêng theo game
-local function createForsakenButtons()
-    clearButtons()
-
-    -- Nút ESP Kẻ Sát Nhân
-    local killerESPButton = Instance.new("TextButton")
-    killerESPButton.Size = UDim2.new(1, -20, 0, 30)
-    killerESPButton.Position = UDim2.new(0, 10, 0, 80)
-    killerESPButton.Text = "Toggle Killer ESP"
-    killerESPButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    killerESPButton.TextColor3 = Color3.new(1, 1, 1)
-    killerESPButton.Font = Enum.Font.SourceSansBold
-    killerESPButton.TextSize = 18
-    killerESPButton.Parent = Frame
-
-    local killerESPEnabled = false
-    killerESPButton.MouseButton1Click:Connect(function()
-        killerESPEnabled = not killerESPEnabled
-        -- Xử lý toggle killer ESP ở đây
-        print("Killer ESP: ", killerESPEnabled)
-    end)
-
-    -- Nút ESP Máy Phát Điện
-    local genESPButton = Instance.new("TextButton")
-    genESPButton.Size = UDim2.new(1, -20, 0, 30)
-    genESPButton.Position = UDim2.new(0, 10, 0, 120)
-    genESPButton.Text = "Toggle Generator ESP"
-    genESPButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    genESPButton.TextColor3 = Color3.new(1, 1, 1)
-    genESPButton.Font = Enum.Font
-    genESPButton.Font = Enum.Font.SourceSansBold
-    genESPButton.TextSize = 18
-    genESPButton.Parent = Frame
-
-    local genESPEnabled = false
-    genESPButton.MouseButton1Click:Connect(function()
-        genESPEnabled = not genESPEnabled
-        -- Xử lý toggle generator ESP ở đây
-        print("Generator ESP: ", genESPEnabled)
-    end)
-end
-
-local function createMysteryMurdererButtons()
-    clearButtons()
-
-    -- Nút ESP Sát Nhân
-    local murdererESPButton = Instance.new("TextButton")
-    murdererESPButton.Size = UDim2.new(1, -20, 0, 30)
-    murdererESPButton.Position = UDim2.new(0, 10, 0, 80)
-    murdererESPButton.Text = "Toggle Murderer ESP"
-    murdererESPButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    murdererESPButton.TextColor3 = Color3.new(1, 1, 1)
-    murdererESPButton.Font = Enum.Font.SourceSansBold
-    murdererESPButton.TextSize = 18
-    murdererESPButton.Parent = Frame
-
-    local murdererESPEnabled = false
-    murdererESPButton.MouseButton1Click:Connect(function()
-        murdererESPEnabled = not murdererESPEnabled
-        print("Murderer ESP: ", murdererESPEnabled)
-    end)
-
-    -- Nút ESP Súng
-    local gunESPButton = Instance.new("TextButton")
-    gunESPButton.Size = UDim2.new(1, -20, 0, 30)
-    gunESPButton.Position = UDim2.new(0, 10, 0, 120)
-    gunESPButton.Text = "Toggle Gun ESP"
-    gunESPButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    gunESPButton.TextColor3 = Color3.new(1, 1, 1)
-    gunESPButton.Font = Enum.Font.SourceSansBold
-    gunESPButton.TextSize = 18
-    gunESPButton.Parent = Frame
-
-    local gunESPEnabled = false
-    gunESPButton.MouseButton1Click:Connect(function()
-        gunESPEnabled = not gunESPEnabled
-        print("Gun ESP: ", gunESPEnabled)
-    end)
-
-    -- Nút ESP Cảnh Sát Trưởng
-    local sheriffESPButton = Instance.new("TextButton")
-    sheriffESPButton.Size = UDim2.new(1, -20, 0, 30)
-    sheriffESPButton.Position = UDim2.new(0, 10, 0, 160)
-    sheriffESPButton.Text = "Toggle Sheriff ESP"
-    sheriffESPButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    sheriffESPButton.TextColor3 = Color3.new(1, 1, 1)
-    sheriffESPButton.Font = Enum.Font.SourceSansBold
-    sheriffESPButton.TextSize = 18
-    sheriffESPButton.Parent = Frame
-
-    local sheriffESPEnabled = false
-    sheriffESPButton.MouseButton1Click:Connect(function()
-        sheriffESPEnabled = not sheriffESPEnabled
-        print("Sheriff ESP: ", sheriffESPEnabled)
-    end)
-end
-
-local function createDefaultButtons()
-    clearButtons()
-    -- Ở đây bạn có thể thêm các nút ESP mặc định, ví dụ toggle ESP tất cả người chơi
-    -- Chúng ta đã có espAllButton ở trên dùng chung rồi
-end
-
--- Chọn UI hiển thị theo game
-if GameId == FORSAKEN_ID then
-    Title.Text = "Forsaken ESP Menu"
-    createForsakenButtons()
-elseif GameId == MYSTERY_MURDERER2_ID then
-    Title.Text = "Mystery Murderer 2 ESP Menu"
-    createMysteryMurdererButtons()
-else
-    Title.Text = "Default ESP Menu"
-    createDefaultButtons()
-end
-
--- Hàm populate player list được gọi sau khi tạo UI nút xong
-populatePlayerList()
-
--- Cập nhật player list khi người chơi vào ra
-Players.PlayerAdded:Connect(populatePlayerList)
-Players.PlayerRemoving:Connect(function(plr)
-    if plr == selectedPlayer then
-        clearAllESP()
-        selectedPlayer = nil
-    end
-    populatePlayerList()
-end)
-
--- Drag frame support (giữ nguyên code từ trước)
-local dragging = false
-local dragInput
-local dragStart
-local startPos
-
-local function updateInput(input)
-    local delta = input.Position - dragStart
-    Frame.Position = UDim2.new(
-        startPos.X.Scale,
-        startPos.X.Offset + delta.X,
-        startPos.Y.Scale,
-        startPos.Y.Offset + delta.Y
-    )
-end
-
-Frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = Frame.Position
-
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-Frame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
-
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        updateInput(input)
-    end
-end)
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-
-local FORSAKEN_ID = 18687417158
-local MYSTERY_MURDERER2_ID = 142823291
-
-local GameId = game.PlaceId
-
 -- GUI setup
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ESPMenu"
@@ -393,7 +26,7 @@ Title.Parent = Frame
 local espAllButton = Instance.new("TextButton")
 espAllButton.Size = UDim2.new(1, -20, 0, 30)
 espAllButton.Position = UDim2.new(0, 10, 0, 40)
-espAllButton.Text = "Toggle ESP All"
+espAllButton.Text = "ESP All: OFF"
 espAllButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
 espAllButton.TextColor3 = Color3.new(1, 1, 1)
 espAllButton.Font = Enum.Font.SourceSansBold
@@ -462,6 +95,7 @@ local function createHighlight(character)
 end
 
 local function clearAllESP()
+    -- Xóa tất cả BillboardGui ESP
     for part, _ in pairs(espParts) do
         local oldGui = part:FindFirstChild("ESPGui")
         if oldGui then
@@ -470,8 +104,9 @@ local function clearAllESP()
     end
     espParts = {}
 
+    -- Xóa tất cả Highlight
     for character, highlight in pairs(highlights) do
-        if highlight then
+        if highlight and highlight.Parent then
             highlight:Destroy()
         end
     end
@@ -525,6 +160,8 @@ local function populatePlayerList()
 
             btn.MouseButton1Click:Connect(function()
                 espAllEnabled = false
+                espAllButton.Text = "ESP All: OFF"
+                espAllButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
                 selectedPlayer = player
                 updateESPForPlayer(player)
             end)
@@ -538,131 +175,17 @@ end
 espAllButton.MouseButton1Click:Connect(function()
     espAllEnabled = not espAllEnabled
     selectedPlayer = nil
+    clearAllESP()  -- Xóa hết highlight và gui cũ
     updateESPForAllPlayers(espAllEnabled)
-end)
 
--- Xóa nút chuyên biệt (nếu có)
-local function clearButtons()
-    for _, child in pairs(Frame:GetChildren()) do
-        if child:IsA("TextButton") and child ~= espAllButton then
-            child:Destroy()
-        end
+    if espAllEnabled then
+        espAllButton.Text = "ESP All: ON"
+        espAllButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+    else
+        espAllButton.Text = "ESP All: OFF"
+        espAllButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     end
-end
-
--- Tạo nút cho Forsaken
-local function createForsakenButtons()
-    clearButtons()
-    local killerESPButton = Instance.new("TextButton")
-    killerESPButton.Size = UDim2.new(1, -20, 0, 30)
-    killerESPButton.Position = UDim2.new(0, 10, 0, 80)
-    killerESPButton.Text = "Toggle Killer ESP"
-    killerESPButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    killerESPButton.TextColor3 = Color3.new(1, 1, 1)
-    killerESPButton.Font = Enum.Font.SourceSansBold
-    killerESPButton.TextSize = 18
-    killerESPButton.Parent = Frame
-
-    local killerESPEnabled = false
-    killerESPButton.MouseButton1Click:Connect(function()
-        killerESPEnabled = not killerESPEnabled
-        print("Forsaken Killer ESP:", killerESPEnabled)
-        -- TODO: Add logic for killer ESP
-    end)
-
-    local genESPButton = Instance.new("TextButton")
-    genESPButton.Size = UDim2.new(1, -20, 0, 30)
-    genESPButton.Position = UDim2.new(0, 10, 0, 120)
-    genESPButton.Text = "Toggle Generator ESP"
-    genESPButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    genESPButton.TextColor3 = Color3.new(1, 1, 1)
-    genESPButton.Font = Enum.Font.SourceSansBold
-    genESPButton.TextSize = 18
-    genESPButton.Parent = Frame
-
-    local genESPEnabled = false
-    genESPButton.MouseButton1Click:Connect(function()
-        genESPEnabled = not genESPEnabled
-        print("Forsaken Generator ESP:", genESPEnabled)
-        -- TODO: Add logic for generator ESP
-    end)
-end
-
--- Tạo nút cho Mystery Murderer 2
-local function createMysteryMurdererButtons()
-    clearButtons()
-
-    local murdererESPButton = Instance.new("TextButton")
-    murdererESPButton.Size = UDim2.new(1, -20, 0, 30)
-    murdererESPButton.Position = UDim2.new(0, 10, 0, 80)
-    murdererESPButton.Text = "Toggle Murderer ESP"
-    murdererESPButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    murdererESPButton.TextColor3 = Color3.new(1, 1, 1)
-    murdererESPButton.Font = Enum.Font.SourceSansBold
-    murdererESPButton.TextSize = 18
-    murdererESPButton.Parent = Frame
-
-    local murdererESPEnabled = false
-    murdererESPButton.MouseButton1Click:Connect(function()
-        murdererESPEnabled = not murdererESPEnabled
-        print("Mystery Murderer Murderer ESP:", murdererESPEnabled)
-        -- TODO: Add logic for murderer ESP
-    end)
-
-    local gunESPButton = Instance.new("TextButton")
-    gunESPButton.Size = UDim2.new(1, -20, 0, 30)
-    gunESPButton.Position = UDim2.new(0, 10, 0, 120)
-    gunESPButton.Text = "Toggle Gun ESP"
-    gunESPButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    gunESPButton.TextColor3 = Color3.new(1, 1, 1)
-    gunESPButton.Font = Enum.Font.SourceSansBold
-    gunESPButton.TextSize = 18
-    gunESPButton.Parent = Frame
-
-    local gunESPEnabled = false
-    gunESPButton.MouseButton1Click:Connect(function()
-        gunESPEnabled = not gunESPEnabled
-        print("Mystery Murderer Gun ESP:", gunESPEnabled)
-        -- TODO: Add logic for gun ESP
-    end)
-
-    local sheriffESPButton = Instance.new("TextButton")
-    sheriffESPButton.Size = UDim2.new(1, -20, 0, 30)
-    sheriffESPButton.Position = UDim2.new(0, 10, 0, 160)
-    sheriffESPButton.Text = "Toggle Sheriff ESP"
-    sheriffESPButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    sheriffESPButton.TextColor3 = Color3.new(1, 1, 1)
-    sheriffESPButton.Font = Enum.Font.SourceSansBold
-    sheriffESPButton.TextSize = 18
-    sheriffESPButton.Parent = Frame
-
-    local sheriffESPEnabled = false
-    sheriffESPButton.MouseButton1Click:Connect(function()
-        sheriffESPEnabled = not sheriffESPEnabled
-        print("Mystery Murderer Sheriff ESP:", sheriffESPEnabled)
-        -- TODO: Add logic for sheriff ESP
-    end)
-end
-
--- Tạo nút mặc định (chỉ có nút espAllButton)
-local function createDefaultButtons()
-    clearButtons()
-    -- Nếu muốn thêm nút mặc định thì thêm ở đây, hiện tại có espAllButton sẵn rồi
-end
-
--- Khởi tạo UI theo game
-if GameId == FORSAKEN_ID then
-    Title.Text = "Forsaken ESP Menu"
-    createForsakenButtons()
-elseif GameId == MYSTERY_MURDERER2_ID then
-    Title.Text = "Mystery Murderer 2 ESP Menu"
-    createMysteryMurdererButtons()
-else
-    Title.Text = "Default ESP Menu"
-    createDefaultButtons()
-end
-
-populatePlayerList()
+end)
 
 Players.PlayerAdded:Connect(populatePlayerList)
 Players.PlayerRemoving:Connect(function(plr)
@@ -672,6 +195,8 @@ Players.PlayerRemoving:Connect(function(plr)
     end
     populatePlayerList()
 end)
+
+populatePlayerList()
 
 -- Drag frame support
 local dragging = false
