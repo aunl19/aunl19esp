@@ -1,0 +1,233 @@
+local code = [[
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+ 
+-- GUI setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ESPMenu"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ 
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 220, 0, 320)
+Frame.Position = UDim2.new(0, 20, 0, 20)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
+ 
+local Title = Instance.new("TextLabel")
+Title.Text = "Select Player for ESP"
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundTransparency = 1
+Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 20
+Title.Parent = Frame
+ 
+local espAllButton = Instance.new("TextButton")
+espAllButton.Size = UDim2.new(1, -20, 0, 30)
+espAllButton.Position = UDim2.new(0, 10, 0, 40)
+espAllButton.Text = "Toggle ESP All"
+espAllButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+espAllButton.TextColor3 = Color3.new(1, 1, 1)
+espAllButton.Font = Enum.Font.SourceSansBold
+espAllButton.TextSize = 18
+espAllButton.Parent = Frame
+ 
+local PlayerList = Instance.new("ScrollingFrame")
+PlayerList.Size = UDim2.new(1, -20, 1, -90)
+PlayerList.Position = UDim2.new(0, 10, 0, 80)
+PlayerList.CanvasSize = UDim2.new(0, 0, 0, 0)
+PlayerList.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+PlayerList.BorderSizePixel = 0
+PlayerList.Parent = Frame
+PlayerList.ScrollBarThickness = 6
+ 
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = PlayerList
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 4)
+ 
+local selectedPlayer = nil
+local espAllEnabled = false
+ 
+local espParts = {}
+local highlights = {}
+ 
+local function createESP(part, playerName)
+    local oldGui = part:FindFirstChild("ESPGui")
+    if oldGui then
+        oldGui:Destroy()
+    end
+ 
+    local gui = Instance.new("BillboardGui")
+    gui.Name = "ESPGui"
+    gui.Adornee = part
+    gui.Size = UDim2.new(0, 120, 0, 30)
+    gui.StudsOffset = Vector3.new(0, 2, 0)
+    gui.AlwaysOnTop = true
+ 
+    local text = Instance.new("TextLabel", gui)
+    text.Size = UDim2.new(1, 0, 1, 0)
+    text.Text = playerName
+    text.TextColor3 = Color3.fromRGB(255, 255, 255)
+    text.BackgroundTransparency = 1
+    text.TextScaled = false
+    text.TextSize = 18
+    text.Font = Enum.Font.SourceSansBold
+ 
+    gui.Parent = part
+end
+ 
+local function createHighlight(character)
+    if highlights[character] then
+        highlights[character]:Destroy()
+        highlights[character] = nil
+    end
+ 
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESPHighlight"
+    highlight.FillColor = Color3.fromRGB(255, 255, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 0)
+    highlight.Adornee = character
+    highlight.Parent = character
+ 
+    highlights[character] = highlight
+end
+ 
+local function clearAllESP()
+    for part, _ in pairs(espParts) do
+        local oldGui = part:FindFirstChild("ESPGui")
+        if oldGui then
+            oldGui:Destroy()
+        end
+    end
+    espParts = {}
+ 
+    for character, highlight in pairs(highlights) do
+        if highlight then
+            highlight:Destroy()
+        end
+    end
+    highlights = {}
+end
+ 
+local function updateESPForPlayer(player)
+    clearAllESP()
+    if not player.Character then return end
+    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        createESP(hrp, player.Name)
+        espParts[hrp] = true
+        createHighlight(player.Character)
+    end
+end
+ 
+local function updateESPForAllPlayers(enable)
+    clearAllESP()
+    if enable then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player.Character then
+                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    createESP(hrp, player.Name)
+                    espParts[hrp] = true
+                    createHighlight(player.Character)
+                end
+            end
+        end
+    end
+end
+ 
+local function populatePlayerList()
+    for _, child in pairs(PlayerList:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+ 
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, 0, 0, 30)
+            btn.Text = player.Name
+            btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+            btn.TextColor3 = Color3.new(1, 1, 1)
+            btn.Font = Enum.Font.SourceSans
+            btn.TextSize = 18
+            btn.Parent = PlayerList
+ 
+            btn.MouseButton1Click:Connect(function()
+                espAllEnabled = false
+                selectedPlayer = player
+                updateESPForPlayer(player)
+            end)
+        end
+    end
+ 
+    wait()
+    PlayerList.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
+end
+ 
+espAllButton.MouseButton1Click:Connect(function()
+    espAllEnabled = not espAllEnabled
+    selectedPlayer = nil
+    updateESPForAllPlayers(espAllEnabled)
+end)
+ 
+Players.PlayerAdded:Connect(populatePlayerList)
+Players.PlayerRemoving:Connect(function(plr)
+    if plr == selectedPlayer then
+        clearAllESP()
+        selectedPlayer = nil
+    end
+    populatePlayerList()
+end)
+ 
+populatePlayerList()
+ 
+-- Drag frame support
+local dragging = false
+local dragInput
+local dragStart
+local startPos
+ 
+local function updateInput(input)
+    local delta = input.Position - dragStart
+    Frame.Position = UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + delta.Y
+    )
+end
+ 
+Frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = Frame.Position
+ 
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+ 
+Frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+ 
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        updateInput(input)
+    end
+end)
+]]
+ 
+loadstring(code)()
+ 
