@@ -9,83 +9,120 @@ gui.Name = "BananaESP_TP"
 gui.ResetOnSpawn = false
 gui.Parent = game:GetService("CoreGui")
 
+-- Helper functions
+local function applyUICorner(instance, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius)
+    corner.Parent = instance
+end
+
+local function addStroke(instance)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(0, 0, 0)
+    stroke.Thickness = 1.2
+    stroke.Parent = instance
+end
+
+local function addHoverEffect(button, normalColor, hoverColor)
+    button.MouseEnter:Connect(function()
+        button.BackgroundColor3 = hoverColor
+    end)
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = normalColor
+    end)
+end
+
+-- Main Frame
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 400, 0, 350)
 mainFrame.Position = UDim2.new(0, 50, 0, 50)
-mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-mainFrame.BackgroundTransparency = 0.2
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = gui
+applyUICorner(mainFrame, 8)
+addStroke(mainFrame)
 
 -- Tabs
 local tabESP = Instance.new("TextButton", mainFrame)
 tabESP.Size = UDim2.new(0.5, 0, 0, 30)
-tabESP.Position = UDim2.new(0, 0, 0, 0)
 tabESP.Text = "ESP"
-tabESP.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+tabESP.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 tabESP.TextColor3 = Color3.new(1, 1, 1)
+tabESP.Font = Enum.Font.GothamBold
+applyUICorner(tabESP, 6)
+addStroke(tabESP)
+addHoverEffect(tabESP, Color3.fromRGB(45, 45, 45), Color3.fromRGB(65, 65, 65))
 
 local tabTP = Instance.new("TextButton", mainFrame)
 tabTP.Size = UDim2.new(0.5, 0, 0, 30)
 tabTP.Position = UDim2.new(0.5, 0, 0, 0)
 tabTP.Text = "Teleport"
-tabTP.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+tabTP.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 tabTP.TextColor3 = Color3.new(1, 1, 1)
+tabTP.Font = Enum.Font.GothamBold
+applyUICorner(tabTP, 6)
+addStroke(tabTP)
+addHoverEffect(tabTP, Color3.fromRGB(35, 35, 35), Color3.fromRGB(60, 60, 60))
 
--- ESP Frame
+-- ESP + TP Frame
 local espFrame = Instance.new("Frame", mainFrame)
 espFrame.Size = UDim2.new(1, 0, 1, -30)
 espFrame.Position = UDim2.new(0, 0, 0, 30)
 espFrame.BackgroundTransparency = 1
 
--- TP Frame
 local tpFrame = Instance.new("Frame", mainFrame)
 tpFrame.Size = UDim2.new(1, 0, 1, -30)
 tpFrame.Position = UDim2.new(0, 0, 0, 30)
 tpFrame.BackgroundTransparency = 1
 tpFrame.Visible = false
 
--- Tab Switch
+-- Tab logic
 tabESP.MouseButton1Click:Connect(function()
     espFrame.Visible = true
     tpFrame.Visible = false
-    tabESP.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    tabTP.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    tabESP.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    tabTP.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 end)
+
 tabTP.MouseButton1Click:Connect(function()
     espFrame.Visible = false
     tpFrame.Visible = true
-    tabTP.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    tabESP.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    tabTP.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    tabESP.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 end)
 
--- Dragging
-local dragging, dragInput, dragStart, startPos
+-- Drag mainFrame
+local dragging = false
 mainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
-        dragStart = input.Position
-        startPos = mainFrame.Position
+        local dragStart = input.Position
+        local startPos = mainFrame.Position
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then dragging = false end
         end)
-    end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        UserInputService.InputChanged:Connect(function(input2)
+            if dragging and input2.UserInputType == Enum.UserInputType.MouseMovement then
+                local delta = input2.Position - dragStart
+                mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end)
     end
 end)
 
--- ========== ESP SETUP ==========
+-- ESP Button
 local espAllButton = Instance.new("TextButton", espFrame)
 espAllButton.Size = UDim2.new(1, -20, 0, 30)
 espAllButton.Position = UDim2.new(0, 10, 0, 0)
 espAllButton.Text = "ESP All: OFF"
-espAllButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+espAllButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 espAllButton.TextColor3 = Color3.new(1, 1, 1)
+espAllButton.Font = Enum.Font.GothamBold
+applyUICorner(espAllButton, 5)
+addStroke(espAllButton)
+addHoverEffect(espAllButton, Color3.fromRGB(60, 60, 60), Color3.fromRGB(90, 90, 90))
 
+-- PlayerList
 local PlayerList = Instance.new("ScrollingFrame", espFrame)
 PlayerList.Size = UDim2.new(1, -20, 1, -50)
 PlayerList.Position = UDim2.new(0, 10, 0, 40)
@@ -93,11 +130,13 @@ PlayerList.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 PlayerList.ScrollBarThickness = 6
 PlayerList.CanvasSize = UDim2.new(0, 0, 0, 0)
 PlayerList.BorderSizePixel = 0
+applyUICorner(PlayerList, 5)
+addStroke(PlayerList)
 
 local UIListLayout = Instance.new("UIListLayout", PlayerList)
 UIListLayout.Padding = UDim.new(0, 4)
 
-local selectedPlayer = nil
+-- ESP Logic
 local espParts, highlights = {}, {}
 local espAllEnabled = false
 
@@ -175,11 +214,15 @@ local function refreshESPList()
             local btn = Instance.new("TextButton", PlayerList)
             btn.Size = UDim2.new(1, 0, 0, 30)
             btn.Text = p.Name
+            btn.Font = Enum.Font.Gotham
             btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
             btn.TextColor3 = Color3.new(1, 1, 1)
+            applyUICorner(btn, 5)
+            addHoverEffect(btn, Color3.fromRGB(70, 70, 70), Color3.fromRGB(100, 100, 100))
             btn.MouseButton1Click:Connect(function()
                 espAllEnabled = false
                 espAllButton.Text = "ESP All: OFF"
+                espAllButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
                 updateESP(p)
             end)
         end
@@ -190,13 +233,8 @@ end
 
 espAllButton.MouseButton1Click:Connect(function()
     espAllEnabled = not espAllEnabled
-    if espAllEnabled then
-        espAllButton.Text = "ESP All: ON"
-        espAllButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-    else
-        espAllButton.Text = "ESP All: OFF"
-        espAllButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    end
+    espAllButton.Text = espAllEnabled and "ESP All: ON" or "ESP All: OFF"
+    espAllButton.BackgroundColor3 = espAllEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
     updateAllESP(espAllEnabled)
 end)
 
@@ -204,13 +242,16 @@ Players.PlayerAdded:Connect(refreshESPList)
 Players.PlayerRemoving:Connect(refreshESPList)
 refreshESPList()
 
--- ========== TELEPORT ==========
+-- TELEPORT UI
 local dropdown = Instance.new("TextButton", tpFrame)
 dropdown.Size = UDim2.new(1, -20, 0, 30)
 dropdown.Position = UDim2.new(0, 10, 0, 10)
 dropdown.Text = "Chọn người chơi"
+dropdown.Font = Enum.Font.Gotham
 dropdown.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 dropdown.TextColor3 = Color3.new(1, 1, 1)
+applyUICorner(dropdown, 5)
+addStroke(dropdown)
 
 local tpListFrame = Instance.new("ScrollingFrame", tpFrame)
 tpListFrame.Size = UDim2.new(1, -20, 0, 100)
@@ -218,6 +259,8 @@ tpListFrame.Position = UDim2.new(0, 10, 0, 45)
 tpListFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 tpListFrame.ScrollBarThickness = 6
 tpListFrame.Visible = false
+applyUICorner(tpListFrame, 5)
+addStroke(tpListFrame)
 
 local tpLayout = Instance.new("UIListLayout", tpListFrame)
 tpLayout.Padding = UDim.new(0, 2)
@@ -233,8 +276,10 @@ local function updateTPList()
             local b = Instance.new("TextButton", tpListFrame)
             b.Size = UDim2.new(1, 0, 0, 25)
             b.Text = p.Name
+            b.Font = Enum.Font.Gotham
             b.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
             b.TextColor3 = Color3.new(1, 1, 1)
+            applyUICorner(b, 5)
             b.MouseButton1Click:Connect(function()
                 selectedTP = p
                 dropdown.Text = "Đã chọn: " .. p.Name
@@ -254,8 +299,11 @@ local tpButton = Instance.new("TextButton", tpFrame)
 tpButton.Size = UDim2.new(1, -20, 0, 30)
 tpButton.Position = UDim2.new(0, 10, 0, 160)
 tpButton.Text = "Teleport"
+tpButton.Font = Enum.Font.GothamBold
 tpButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
 tpButton.TextColor3 = Color3.new(1, 1, 1)
+applyUICorner(tpButton, 5)
+addHoverEffect(tpButton, Color3.fromRGB(100, 100, 100), Color3.fromRGB(130, 130, 130))
 
 tpButton.MouseButton1Click:Connect(function()
     if selectedTP and selectedTP.Character and selectedTP.Character:FindFirstChild("HumanoidRootPart") then
