@@ -1,0 +1,270 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- GUI setup
+local gui = Instance.new("ScreenGui")
+gui.Name = "BananaESP_TP"
+gui.ResetOnSpawn = false
+gui.Parent = game:GetService("CoreGui")
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 400, 0, 350)
+mainFrame.Position = UDim2.new(0, 50, 0, 50)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mainFrame.BackgroundTransparency = 0.2
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = gui
+
+-- Tabs
+local tabESP = Instance.new("TextButton", mainFrame)
+tabESP.Size = UDim2.new(0.5, 0, 0, 30)
+tabESP.Position = UDim2.new(0, 0, 0, 0)
+tabESP.Text = "ESP"
+tabESP.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+tabESP.TextColor3 = Color3.new(1, 1, 1)
+
+local tabTP = Instance.new("TextButton", mainFrame)
+tabTP.Size = UDim2.new(0.5, 0, 0, 30)
+tabTP.Position = UDim2.new(0.5, 0, 0, 0)
+tabTP.Text = "Teleport"
+tabTP.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+tabTP.TextColor3 = Color3.new(1, 1, 1)
+
+-- ESP Frame
+local espFrame = Instance.new("Frame", mainFrame)
+espFrame.Size = UDim2.new(1, 0, 1, -30)
+espFrame.Position = UDim2.new(0, 0, 0, 30)
+espFrame.BackgroundTransparency = 1
+
+-- TP Frame
+local tpFrame = Instance.new("Frame", mainFrame)
+tpFrame.Size = UDim2.new(1, 0, 1, -30)
+tpFrame.Position = UDim2.new(0, 0, 0, 30)
+tpFrame.BackgroundTransparency = 1
+tpFrame.Visible = false
+
+-- Tab Switch
+tabESP.MouseButton1Click:Connect(function()
+    espFrame.Visible = true
+    tpFrame.Visible = false
+    tabESP.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    tabTP.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+end)
+tabTP.MouseButton1Click:Connect(function()
+    espFrame.Visible = false
+    tpFrame.Visible = true
+    tabTP.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    tabESP.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+end)
+
+-- Dragging
+local dragging, dragInput, dragStart, startPos
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- ========== ESP SETUP ==========
+local espAllButton = Instance.new("TextButton", espFrame)
+espAllButton.Size = UDim2.new(1, -20, 0, 30)
+espAllButton.Position = UDim2.new(0, 10, 0, 0)
+espAllButton.Text = "ESP All: OFF"
+espAllButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+espAllButton.TextColor3 = Color3.new(1, 1, 1)
+
+local PlayerList = Instance.new("ScrollingFrame", espFrame)
+PlayerList.Size = UDim2.new(1, -20, 1, -50)
+PlayerList.Position = UDim2.new(0, 10, 0, 40)
+PlayerList.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+PlayerList.ScrollBarThickness = 6
+PlayerList.CanvasSize = UDim2.new(0, 0, 0, 0)
+PlayerList.BorderSizePixel = 0
+
+local UIListLayout = Instance.new("UIListLayout", PlayerList)
+UIListLayout.Padding = UDim.new(0, 4)
+
+local selectedPlayer = nil
+local espParts, highlights = {}, {}
+local espAllEnabled = false
+
+local function clearAllESP()
+    for part in pairs(espParts) do
+        local gui = part:FindFirstChild("ESPGui")
+        if gui then gui:Destroy() end
+    end
+    espParts = {}
+    for _, hl in pairs(highlights) do
+        if hl then hl:Destroy() end
+    end
+    highlights = {}
+end
+
+local function createESP(part, name)
+    local gui = Instance.new("BillboardGui")
+    gui.Name = "ESPGui"
+    gui.Adornee = part
+    gui.Size = UDim2.new(0, 100, 0, 20)
+    gui.AlwaysOnTop = true
+    gui.StudsOffset = Vector3.new(0, 2, 0)
+    gui.Parent = part
+
+    local txt = Instance.new("TextLabel", gui)
+    txt.Size = UDim2.new(1, 0, 1, 0)
+    txt.Text = name
+    txt.TextColor3 = Color3.new(1, 1, 1)
+    txt.BackgroundTransparency = 1
+    txt.TextScaled = true
+end
+
+local function createHighlight(char)
+    local h = Instance.new("Highlight")
+    h.FillColor = Color3.fromRGB(255, 255, 0)
+    h.OutlineColor = Color3.fromRGB(255, 255, 0)
+    h.Adornee = char
+    h.Parent = char
+    highlights[char] = h
+end
+
+local function updateESP(player)
+    clearAllESP()
+    if not player.Character then return end
+    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        createESP(hrp, player.Name)
+        espParts[hrp] = true
+        createHighlight(player.Character)
+    end
+end
+
+local function updateAllESP(enable)
+    clearAllESP()
+    if enable then
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Character and p ~= LocalPlayer then
+                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    createESP(hrp, p.Name)
+                    espParts[hrp] = true
+                    createHighlight(p.Character)
+                end
+            end
+        end
+    end
+end
+
+local function refreshESPList()
+    for _, v in ipairs(PlayerList:GetChildren()) do
+        if v:IsA("TextButton") then v:Destroy() end
+    end
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            local btn = Instance.new("TextButton", PlayerList)
+            btn.Size = UDim2.new(1, 0, 0, 30)
+            btn.Text = p.Name
+            btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+            btn.TextColor3 = Color3.new(1, 1, 1)
+            btn.MouseButton1Click:Connect(function()
+                espAllEnabled = false
+                espAllButton.Text = "ESP All: OFF"
+                updateESP(p)
+            end)
+        end
+    end
+    task.wait()
+    PlayerList.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
+end
+
+espAllButton.MouseButton1Click:Connect(function()
+    espAllEnabled = not espAllEnabled
+    if espAllEnabled then
+        espAllButton.Text = "ESP All: ON"
+        espAllButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+    else
+        espAllButton.Text = "ESP All: OFF"
+        espAllButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    end
+    updateAllESP(espAllEnabled)
+end)
+
+Players.PlayerAdded:Connect(refreshESPList)
+Players.PlayerRemoving:Connect(refreshESPList)
+refreshESPList()
+
+-- ========== TELEPORT ==========
+local dropdown = Instance.new("TextButton", tpFrame)
+dropdown.Size = UDim2.new(1, -20, 0, 30)
+dropdown.Position = UDim2.new(0, 10, 0, 10)
+dropdown.Text = "Chọn người chơi"
+dropdown.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+dropdown.TextColor3 = Color3.new(1, 1, 1)
+
+local tpListFrame = Instance.new("ScrollingFrame", tpFrame)
+tpListFrame.Size = UDim2.new(1, -20, 0, 100)
+tpListFrame.Position = UDim2.new(0, 10, 0, 45)
+tpListFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+tpListFrame.ScrollBarThickness = 6
+tpListFrame.Visible = false
+
+local tpLayout = Instance.new("UIListLayout", tpListFrame)
+tpLayout.Padding = UDim.new(0, 2)
+
+local selectedTP = nil
+
+local function updateTPList()
+    for _, c in ipairs(tpListFrame:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            local b = Instance.new("TextButton", tpListFrame)
+            b.Size = UDim2.new(1, 0, 0, 25)
+            b.Text = p.Name
+            b.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+            b.TextColor3 = Color3.new(1, 1, 1)
+            b.MouseButton1Click:Connect(function()
+                selectedTP = p
+                dropdown.Text = "Đã chọn: " .. p.Name
+                tpListFrame.Visible = false
+            end)
+        end
+    end
+    task.wait()
+    tpListFrame.CanvasSize = UDim2.new(0, 0, 0, tpLayout.AbsoluteContentSize.Y)
+end
+
+dropdown.MouseButton1Click:Connect(function()
+    tpListFrame.Visible = not tpListFrame.Visible
+end)
+
+local tpButton = Instance.new("TextButton", tpFrame)
+tpButton.Size = UDim2.new(1, -20, 0, 30)
+tpButton.Position = UDim2.new(0, 10, 0, 160)
+tpButton.Text = "Teleport"
+tpButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+tpButton.TextColor3 = Color3.new(1, 1, 1)
+
+tpButton.MouseButton1Click:Connect(function()
+    if selectedTP and selectedTP.Character and selectedTP.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character:MoveTo(selectedTP.Character.HumanoidRootPart.Position + Vector3.new(0, 5, 0))
+    else
+        warn("Không thể teleport.")
+    end
+end)
+
+Players.PlayerAdded:Connect(updateTPList)
+Players.PlayerRemoving:Connect(updateTPList)
+updateTPList()
